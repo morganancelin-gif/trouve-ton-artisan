@@ -1,0 +1,20 @@
+// Les variables doivent être importées AVANT Bootstrap pour le surcharger
+@import "variables";
+@import "../../node_modules/bootstrap/scss/bootstrap";
+
+// ============================================
+// Styles globaux personnalisés
+// ============================================
+body {
+  background-color: $bg-light;
+}
+
+// Style de focus visible et cohérent, requis par WCAG 2.1 (critère 2.4.7)
+// pour que la navigation au clavier soit toujours repérable
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid $primary-blue;
+  outline-offset: 2px;
+}

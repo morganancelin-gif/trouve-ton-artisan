@@ -1,0 +1,21 @@
+// ============================================
+// Palette de couleurs officielle du brief
+// ============================================
+$bg-light: #f1f8fc;
+$primary-blue: #0074c7;
+$primary-dark-blue: #00497c;
+$text-dark: #384050;
+$accent-red: #cd2c2e;
+$accent-green: #82b864;
+
+// Variables Bootstrap : on les redéfinit AVANT d'importer Bootstrap
+// pour que le framework utilise notre palette plutôt que la sienne par défaut
+$primary: $primary-blue;
+$dark: $text-dark;
+$danger: $accent-red;
+$success: $accent-green;
+$body-color: $text-dark;
+$link-color: $primary-blue;
+
+// Police du brief (Graphik), avec fallback système si non installée
+$font-family-base: 'Graphik', 'Inter', -apple-system, sans-serif;
