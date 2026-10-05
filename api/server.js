@@ -1,12 +1,9 @@
 require('dotenv').config();
 
-// ============================================
-// Filet de sécurité global : capture absolument TOUTE erreur,
-// même celle survenant pendant le chargement d'un module (require),
-// et garantit que le message est bien écrit avant que le processus
-// ne se termine (évite la perte de logs liée à l'écriture asynchrone
-// de stdout dans un environnement non-interactif comme Render).
-// ============================================
+// Filet de sécurité global : capture toute erreur même pendant le
+// chargement d'un module, et garantit que le message est bien écrit
+// avant l'arrêt du processus (utile en environnement de production
+// comme Render, où l'écriture des logs peut être asynchrone).
 function exitWithLog(message) {
   process.stderr.write(`${message}\n`, () => {
     process.exit(1);
@@ -20,19 +17,6 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason) => {
   exitWithLog(`❌ Promesse rejetée non gérée : ${reason}`);
 });
-
-// Diagnostic affiché EN TOUT PREMIER, avant même de charger le module
-// de connexion à la base — s'il ne s'affiche pas, le crash est encore
-// plus précoce (dotenv lui-même, ou une erreur de syntaxe).
-console.log('--- Diagnostic variables d\'environnement ---');
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_PORT:', process.env.DB_PORT);
-console.log('DB_NAME:', process.env.DB_NAME);
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_PASSWORD définie ?', Boolean(process.env.DB_PASSWORD));
-console.log('DB_SSL:', process.env.DB_SSL);
-console.log('DB_SSL_CA_BASE64 longueur:', (process.env.DB_SSL_CA_BASE64 || '').length);
-console.log('----------------------------------------------');
 
 const express = require('express');
 const cors = require('cors');
