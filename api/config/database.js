@@ -1,17 +1,23 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// En production (Aiven), la connexion doit être chiffrée (SSL) et vérifiée
-// via le certificat CA fourni par l'hébergeur. En local (XAMPP), DB_SSL
-// n'est simplement pas défini, donc aucune option SSL n'est appliquée.
-const sslOptions = process.env.DB_SSL === 'true'
-  ? {
-      ssl: {
-        ca: Buffer.from(process.env.DB_SSL_CA_BASE64, 'base64').toString('utf-8'),
-        rejectUnauthorized: true,
-      },
-    }
-  : {};
+let sslOptions = {};
+
+if (process.env.DB_SSL === 'true') {
+  if (!process.env.DB_SSL_CA_BASE64) {
+    // Erreur explicite et immédiatement visible dans les logs, plutôt
+    // qu'un crash silencieux dans Buffer.from() sans aucune explication.
+    console.error('❌ DB_SSL=true mais DB_SSL_CA_BASE64 est vide ou absente.');
+    process.exit(1);
+  }
+
+  sslOptions = {
+    ssl: {
+      ca: Buffer.from(process.env.DB_SSL_CA_BASE64, 'base64').toString('utf-8'),
+      rejectUnauthorized: true,
+    },
+  };
+}
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
