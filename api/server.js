@@ -1,4 +1,39 @@
 require('dotenv').config();
+
+// ============================================
+// Filet de sécurité global : capture absolument TOUTE erreur,
+// même celle survenant pendant le chargement d'un module (require),
+// et garantit que le message est bien écrit avant que le processus
+// ne se termine (évite la perte de logs liée à l'écriture asynchrone
+// de stdout dans un environnement non-interactif comme Render).
+// ============================================
+function exitWithLog(message) {
+  process.stderr.write(`${message}\n`, () => {
+    process.exit(1);
+  });
+}
+
+process.on('uncaughtException', (error) => {
+  exitWithLog(`❌ Exception non interceptée : ${error.stack || error.message}`);
+});
+
+process.on('unhandledRejection', (reason) => {
+  exitWithLog(`❌ Promesse rejetée non gérée : ${reason}`);
+});
+
+// Diagnostic affiché EN TOUT PREMIER, avant même de charger le module
+// de connexion à la base — s'il ne s'affiche pas, le crash est encore
+// plus précoce (dotenv lui-même, ou une erreur de syntaxe).
+console.log('--- Diagnostic variables d\'environnement ---');
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('DB_USER:', process.env.DB_USER);
+console.log('DB_PASSWORD définie ?', Boolean(process.env.DB_PASSWORD));
+console.log('DB_SSL:', process.env.DB_SSL);
+console.log('DB_SSL_CA_BASE64 longueur:', (process.env.DB_SSL_CA_BASE64 || '').length);
+console.log('----------------------------------------------');
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -11,15 +46,6 @@ const artisanRoutes = require('./routes/artisanRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 
 const app = express();
-
-// --- Diagnostic temporaire : confirme ce que Render a réellement reçu,
-// sans jamais afficher les valeurs sensibles elles-mêmes (juste leur longueur).
-console.log('--- Diagnostic variables d\'environnement ---');
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_PORT:', process.env.DB_PORT);
-console.log('DB_SSL:', process.env.DB_SSL);
-console.log('DB_SSL_CA_BASE64 longueur:', (process.env.DB_SSL_CA_BASE64 || '').length);
-console.log('----------------------------------------------');
 
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN, methods: ['GET', 'POST'] }));
@@ -42,9 +68,6 @@ app.use('/api/contact', contactRoutes);
 
 const PORT = process.env.PORT || 4000;
 
-// Timeout manuel de 10 secondes : si la connexion à la base n'aboutit pas
-// dans ce délai, on échoue bruyamment avec un message clair plutôt que
-// de rester bloqué en silence jusqu'à ce que Render tue le processus.
 const authenticateWithTimeout = Promise.race([
   sequelize.authenticate(),
   new Promise((_, reject) =>
@@ -60,6 +83,5 @@ authenticateWithTimeout
     });
   })
   .catch((error) => {
-    console.error('❌ Impossible de se connecter à la base :', error.message);
-    process.exit(1);
+    exitWithLog(`❌ Impossible de se connecter à la base : ${error.message}`);
   });

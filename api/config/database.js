@@ -5,10 +5,10 @@ let sslOptions = {};
 
 if (process.env.DB_SSL === 'true') {
   if (!process.env.DB_SSL_CA_BASE64) {
-    // Erreur explicite et immédiatement visible dans les logs, plutôt
-    // qu'un crash silencieux dans Buffer.from() sans aucune explication.
-    console.error('❌ DB_SSL=true mais DB_SSL_CA_BASE64 est vide ou absente.');
-    process.exit(1);
+    // On laisse l'erreur remonter normalement : le gestionnaire global
+    // uncaughtException de server.js s'occupe de l'afficher proprement
+    // et de garantir qu'elle soit bien écrite avant l'arrêt du processus.
+    throw new Error('DB_SSL=true mais DB_SSL_CA_BASE64 est vide ou absente.');
   }
 
   sslOptions = {
