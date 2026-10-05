@@ -12,25 +12,18 @@ const contactRoutes = require('./routes/contactRoutes');
 
 const app = express();
 
-// --- Sécurité HTTP générale ---
-// Ajoute automatiquement des en-têtes qui préviennent des attaques courantes :
-// X-Content-Type-Options (anti-sniffing MIME), X-Frame-Options (anti-clickjacking),
-// Strict-Transport-Security, et retire l'en-tête "X-Powered-By: Express" qui
-// révèle inutilement la techno utilisée à un attaquant potentiel.
+// --- Diagnostic temporaire : confirme ce que Render a réellement reçu,
+// sans jamais afficher les valeurs sensibles elles-mêmes (juste leur longueur).
+console.log('--- Diagnostic variables d\'environnement ---');
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('DB_SSL:', process.env.DB_SSL);
+console.log('DB_SSL_CA_BASE64 longueur:', (process.env.DB_SSL_CA_BASE64 || '').length);
+console.log('----------------------------------------------');
+
 app.use(helmet());
+app.use(cors({ origin: process.env.CORS_ORIGIN, methods: ['GET', 'POST'] }));
 
-// --- CORS restreint à l'application front uniquement ---
-// Sans ce réglage, CORS autorise par défaut TOUT site à appeler l'API en JS.
-// Ici, seule l'origine définie dans .env (l'app React) est autorisée ;
-// toute autre origine reçoit une erreur CORS bloquée par le navigateur.
-app.use(cors({
-  origin: process.env.CORS_ORIGIN,
-  methods: ['GET', 'POST'],
-}));
-
-// --- Limitation du nombre de requêtes (anti-spam / anti-brute-force) ---
-// Protège contre une exploration automatisée agressive de l'API ou un
-// spam du formulaire de contact : 100 requêtes maximum par IP toutes les 15 minutes.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -49,7 +42,17 @@ app.use('/api/contact', contactRoutes);
 
 const PORT = process.env.PORT || 4000;
 
-sequelize.authenticate()
+// Timeout manuel de 10 secondes : si la connexion à la base n'aboutit pas
+// dans ce délai, on échoue bruyamment avec un message clair plutôt que
+// de rester bloqué en silence jusqu'à ce que Render tue le processus.
+const authenticateWithTimeout = Promise.race([
+  sequelize.authenticate(),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Timeout : connexion DB non résolue après 10s')), 10000)
+  ),
+]);
+
+authenticateWithTimeout
   .then(() => {
     console.log('✅ Connexion à MySQL réussie (Sequelize)');
     app.listen(PORT, () => {
